@@ -9,6 +9,7 @@ from keyring.backends import Windows, macOS
 import platform
 import sys
 from oauthlib.oauth2.rfc6749.errors import CustomOAuth2Error
+import datetime
 
 os_user = getpass.getuser().lower()
 
@@ -171,7 +172,7 @@ def server(address, port, username, password, insecure, format, status, ips, ver
 
         if status:
             server_status = tnscon.server_status_get()
-            print(server_status)
+            print(one_address, server_status)
         if ips:
             server_properties = tnscon.server_properties_get()
             licensed_ips = server_properties['license']['ips']
@@ -182,8 +183,8 @@ def server(address, port, username, password, insecure, format, status, ips, ver
                   + ' = ' + '{0:}'.format(left_ips) + ' (' + left_ips_percentage + '%) remaining IPs')
 
         if version:
-            server_version =tnscon.server_properties_get()['server_version']
-            print(server_version)
+            server_version = tnscon.server_properties_get()['server_version']
+            print(one_address, server_version)
 
         tnscon.logout()
 
@@ -192,8 +193,8 @@ def server(address, port, username, password, insecure, format, status, ips, ver
 @add_options(_login_options)
 @add_options(_general_options)
 @click.option('--list', is_flag=True,
-              help="Get users list")
-def users(address, port, username, password, insecure, format, list, verbose):
+              help="Get user list")
+def user(address, port, username, password, insecure, format, list, verbose):
     """get Nessus user info"""
 
     for one_address in address:
@@ -213,6 +214,12 @@ def users(address, port, username, password, insecure, format, list, verbose):
         if list:
             print(one_address)
             users_on_nessus = tnscon.users_get()
+            users_on_nessus = [{
+                'id': k['id'],
+                'username': k['username'],
+                'name': k['name'],
+                'lastlogin': datetime.datetime.fromtimestamp(0 if k['lastlogin'] is None else k['lastlogin']),
+            } for k in users_on_nessus]
             if format == 'table':
                 print(dataframe_table(users_on_nessus))
             else:
@@ -228,8 +235,8 @@ def users(address, port, username, password, insecure, format, list, verbose):
 @add_options(_login_options)
 @add_options(_general_options)
 @click.option('--list', is_flag=True,
-              help="Get scan policies list")
-def policies(address, port, username, password, insecure, format, list, verbose):
+              help="Get scan policy list")
+def policy(address, port, username, password, insecure, format, list, verbose):
     """get Nessus policy info"""
 
     for one_address in address:
@@ -249,6 +256,13 @@ def policies(address, port, username, password, insecure, format, list, verbose)
         if list:
             print(one_address)
             scan_policies_on_nessus = tnscon.policies_get()
+            scan_policies_on_nessus = [{
+                'id': k['id'],
+                'name': k['name'],
+                'owner': k['owner'],
+                'creation_date': datetime.datetime.fromtimestamp(int(k['creation_date'])),
+                'last_modification_date': datetime.datetime.fromtimestamp(int(k['last_modification_date'])),
+            } for k in scan_policies_on_nessus]
             if scan_policies_on_nessus is not None:
                 if format == 'table':
                     print(dataframe_table(scan_policies_on_nessus))
@@ -266,8 +280,8 @@ def policies(address, port, username, password, insecure, format, list, verbose)
 @add_options(_login_options)
 @add_options(_general_options)
 @click.option('--list', is_flag=True,
-              help="Get scans list")
-def scans(address, port, username, password, insecure, format, list, verbose):
+              help="Get scan list")
+def scan(address, port, username, password, insecure, format, list, verbose):
     """get Nessus scan info"""
 
     for one_address in address:
@@ -287,10 +301,59 @@ def scans(address, port, username, password, insecure, format, list, verbose):
         if list:
             print(one_address)
             scans_on_nessus = tnscon.scans_get()
+            scans_on_nessus = [{
+                'folder_id': k['folder_id'],
+                'id': k['id'],
+                'name': k['name'],
+                'owner': k['owner'],
+                'creation_date': datetime.datetime.fromtimestamp(int(k['creation_date'])),
+                'last_modification_date': datetime.datetime.fromtimestamp(int(k['last_modification_date'])),
+            } for k in scans_on_nessus]
             if format == 'table':
                 print(dataframe_table(scans_on_nessus))
             else:
                 print(scans_on_nessus)
+
+        else:
+            print("No option given!")
+
+        tnscon.logout()
+
+
+@cli.command()
+@add_options(_login_options)
+@add_options(_general_options)
+@click.option('--family-list', is_flag=True,
+              help="Get plugins familieslist")
+def plugin(address, port, username, password, insecure, format, family_list, verbose):
+    """get Nessus plugin info"""
+
+    for one_address in address:
+        one_password = password_check(one_address, username, password, verbose)
+
+        try:
+            tnscon = TnsApi(one_address, port, insecure)
+            tnscon.login(username, one_password)
+        except ConnectionError as e:
+            print("Can't reach Nessus API via {}. Please check your connection.".format(one_address))
+            sys.exit(1)
+
+        except CustomOAuth2Error as e:
+            print("Can't login to Nessus API with supplied credentials. Please make sure they are correct.")
+            sys.exit(1)
+
+        if family_list:
+            print(one_address)
+            plugins_families_on_nessus = tnscon.plugins_families_get()
+            plugins_families_on_nessus = [{
+                'id': k['id'],
+                'name': k['name'],
+                'count': k['count'],
+            } for k in plugins_families_on_nessus]
+            if format == 'table':
+                print(dataframe_table(plugins_families_on_nessus, sortby='id'))
+            else:
+                print(plugins_families_on_nessus)
 
         else:
             print("No option given!")
