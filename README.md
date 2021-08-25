@@ -9,10 +9,14 @@ Main features
 =============
 
 Initial version of **TNSCM** lets you get Nessus:
-* scans list
-* policies list
-* users list
-* status of available IPs
+* plugin family list
+* policy list
+* scan list
+* server info
+  * status
+  * licensed IPs
+  * version
+* user list
 
 
 How to
