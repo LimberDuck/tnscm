@@ -88,36 +88,6 @@ class TnsApi:
         """
         self.connect('DELETE', '/session')
 
-    def data_limiter(self, data, limiter):
-        """
-        Function limits data returned by application to given columns.
-        :param data: data to limit
-        :param limiter: list of columns names expected in data
-        :return: data limited to given column names
-        """
-        data_clean = []
-
-        if limiter:
-            # print('limiter set')
-            for data_entry in data:
-                data_entry_clean = {}
-                for limiter_entry in limiter:
-                    if limiter_entry in data_entry:
-                        if limiter_entry == 'creation_date' or \
-                                limiter_entry == 'last_modification_date':
-                            data_entry_clean.update({limiter_entry: datetime.datetime.fromtimestamp(data_entry[limiter_entry])})
-                        elif limiter_entry == 'lastlogin':
-                            data_entry_clean.update({limiter_entry: data_entry[limiter_entry]})
-                        else:
-                            data_entry_clean.update({limiter_entry: data_entry[limiter_entry]})
-                data_clean.append(data_entry_clean)
-        else:
-            # print('limiter not set')
-            data_clean = data
-            # print(len(data_clean))
-
-        return data_clean
-
     def session_get(self):
         data = self.connect('GET', '/session')
         return data
@@ -132,12 +102,10 @@ class TnsApi:
 
     def policies_get(self):
         data = self.connect('GET', '/policies')['policies']
-        data = self.data_limiter(data, ['id', 'name', 'creation_date', 'last_modification_date', 'owner'])
         return data
 
     def users_get(self):
         data = self.connect('GET', '/users')['users']
-        data = self.data_limiter(data, ['id', 'username', 'name', 'lastlogin'])
         return data
 
     def folders_get(self):
@@ -146,5 +114,8 @@ class TnsApi:
 
     def scans_get(self):
         data = self.connect('GET', '/scans')['scans']
-        data = self.data_limiter(data, ['folder_id', 'id', 'name', 'creation_date', 'last_modification_date', 'owner'])
+        return data
+
+    def plugins_families_get(self):
+        data = self.connect('GET', '/plugins/families')['families']
         return data
