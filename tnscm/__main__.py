@@ -10,6 +10,7 @@ import platform
 import sys
 from oauthlib.oauth2.rfc6749.errors import CustomOAuth2Error
 import datetime
+import jmespath
 
 os_user = getpass.getuser().lower()
 
@@ -34,8 +35,10 @@ _login_options = [
     click.option('--insecure', '-k', is_flag=True,
                  help="perform insecure SSL connections and transfers"),
     click.option('--format', '-f', default='table',
-                 help='data format to display [table,json]',
-                 show_default="table")
+                 help='data format to display [table,json,csv]',
+                 show_default="table"),
+    click.option('--filter', '-f',
+                 help='filter data with JMESPath. See https://jmespath.org/ for more information and examples.'),
 ]
 
 _general_options = [
@@ -183,8 +186,9 @@ def server(address, port, username, password, insecure, format, status, ips, ver
                   + ' = ' + '{0:}'.format(left_ips) + ' (' + left_ips_percentage + '%) remaining IPs')
 
         if version:
+            nessus_type = tnscon.server_properties_get()['nessus_type']
             server_version = tnscon.server_properties_get()['server_version']
-            print(one_address, server_version)
+            print(one_address, nessus_type, server_version)
 
         tnscon.logout()
 
@@ -194,7 +198,7 @@ def server(address, port, username, password, insecure, format, status, ips, ver
 @add_options(_general_options)
 @click.option('--list', is_flag=True,
               help="Get user list")
-def user(address, port, username, password, insecure, format, list, verbose):
+def user(address, port, username, password, insecure, format, filter, list, verbose):
     """get Nessus user info"""
 
     for one_address in address:
@@ -214,14 +218,28 @@ def user(address, port, username, password, insecure, format, list, verbose):
         if list:
             print(one_address)
             users_on_nessus = tnscon.users_get()
-            users_on_nessus = [{
-                'id': k['id'],
-                'username': k['username'],
-                'name': k['name'],
-                'lastlogin': datetime.datetime.fromtimestamp(0 if k['lastlogin'] is None else k['lastlogin']),
-            } for k in users_on_nessus]
+
+            for user_on_nessus in users_on_nessus:
+                if 'lastlogin' in user_on_nessus:
+                    user_on_nessus.update({'lastlogin': datetime.datetime.fromtimestamp(0 if user_on_nessus['lastlogin'] is None else user_on_nessus['lastlogin'])})
+
+            default_filter = '[].{' \
+                             'id: id, ' \
+                             'username: username, ' \
+                             'name: name, ' \
+                             'lastlogin: lastlogin}'
+
+            if filter:
+                expression = jmespath.compile(filter)
+            else:
+                expression = jmespath.compile(default_filter)
+
+            users_on_nessus = expression.search(users_on_nessus)
+
             if format == 'table':
                 print(dataframe_table(users_on_nessus))
+            elif format == 'csv':
+                print(dataframe_table(users_on_nessus).to_csv(index=False), '\n')
             else:
                 print(users_on_nessus)
 
@@ -236,7 +254,7 @@ def user(address, port, username, password, insecure, format, list, verbose):
 @add_options(_general_options)
 @click.option('--list', is_flag=True,
               help="Get scan policy list")
-def policy(address, port, username, password, insecure, format, list, verbose):
+def policy(address, port, username, password, insecure, format, filter, list, verbose):
     """get Nessus policy info"""
 
     for one_address in address:
@@ -256,16 +274,32 @@ def policy(address, port, username, password, insecure, format, list, verbose):
         if list:
             print(one_address)
             scan_policies_on_nessus = tnscon.policies_get()
-            scan_policies_on_nessus = [{
-                'id': k['id'],
-                'name': k['name'],
-                'owner': k['owner'],
-                'creation_date': datetime.datetime.fromtimestamp(int(k['creation_date'])),
-                'last_modification_date': datetime.datetime.fromtimestamp(int(k['last_modification_date'])),
-            } for k in scan_policies_on_nessus]
+
+            for scan_policy_on_nessus in scan_policies_on_nessus:
+                if 'creation_date' in scan_policy_on_nessus:
+                    scan_policy_on_nessus.update({'creation_date': datetime.datetime.fromtimestamp(int(scan_policy_on_nessus['creation_date']))})
+                if 'last_modification_date' in scan_policy_on_nessus:
+                    scan_policy_on_nessus.update({'last_modification_date': datetime.datetime.fromtimestamp(int(scan_policy_on_nessus['last_modification_date']))})
+
+            default_filter = '[].{' \
+                             'id: id, ' \
+                             'name: name, ' \
+                             'owner: owner, ' \
+                             'creation_date: creation_date, ' \
+                             'last_modification_date: last_modification_date}'
+
+            if filter:
+                expression = jmespath.compile(filter)
+            else:
+                expression = jmespath.compile(default_filter)
+
+            scan_policies_on_nessus = expression.search(scan_policies_on_nessus)
+
             if scan_policies_on_nessus is not None:
                 if format == 'table':
                     print(dataframe_table(scan_policies_on_nessus))
+                elif format == 'csv':
+                    print(dataframe_table(scan_policies_on_nessus).to_csv(index=False), '\n')
                 else:
                     print(scan_policies_on_nessus)
             else:
@@ -281,7 +315,7 @@ def policy(address, port, username, password, insecure, format, list, verbose):
 @add_options(_general_options)
 @click.option('--list', is_flag=True,
               help="Get scan list")
-def scan(address, port, username, password, insecure, format, list, verbose):
+def scan(address, port, username, password, insecure, format, filter, list, verbose):
     """get Nessus scan info"""
 
     for one_address in address:
@@ -301,16 +335,32 @@ def scan(address, port, username, password, insecure, format, list, verbose):
         if list:
             print(one_address)
             scans_on_nessus = tnscon.scans_get()
-            scans_on_nessus = [{
-                'folder_id': k['folder_id'],
-                'id': k['id'],
-                'name': k['name'],
-                'owner': k['owner'],
-                'creation_date': datetime.datetime.fromtimestamp(int(k['creation_date'])),
-                'last_modification_date': datetime.datetime.fromtimestamp(int(k['last_modification_date'])),
-            } for k in scans_on_nessus]
+
+            for scan_on_nessus in scans_on_nessus:
+                if 'creation_date' in scan_on_nessus:
+                    scan_on_nessus.update({'creation_date': datetime.datetime.fromtimestamp(int(scan_on_nessus['creation_date']))})
+                if 'last_modification_date' in scan_on_nessus:
+                    scan_on_nessus.update({'last_modification_date': datetime.datetime.fromtimestamp(int(scan_on_nessus['last_modification_date']))})
+
+            default_filter = '[].{' \
+                             'folder_id: folder_id, ' \
+                             'id: id, ' \
+                             'name: name, ' \
+                             'owner: owner, ' \
+                             'creation_date: creation_date, ' \
+                             'last_modification_date: last_modification_date}'
+
+            if filter:
+                expression = jmespath.compile(filter)
+            else:
+                expression = jmespath.compile(default_filter)
+
+            scans_on_nessus = expression.search(scans_on_nessus)
+
             if format == 'table':
                 print(dataframe_table(scans_on_nessus))
+            elif format == 'csv':
+                print(dataframe_table(scans_on_nessus).to_csv(index=False), '\n')
             else:
                 print(scans_on_nessus)
 
@@ -325,7 +375,7 @@ def scan(address, port, username, password, insecure, format, list, verbose):
 @add_options(_general_options)
 @click.option('--family-list', is_flag=True,
               help="Get plugins familieslist")
-def plugin(address, port, username, password, insecure, format, family_list, verbose):
+def plugin(address, port, username, password, insecure, format, filter, family_list, verbose):
     """get Nessus plugin info"""
 
     for one_address in address:
@@ -345,13 +395,23 @@ def plugin(address, port, username, password, insecure, format, family_list, ver
         if family_list:
             print(one_address)
             plugins_families_on_nessus = tnscon.plugins_families_get()
-            plugins_families_on_nessus = [{
-                'id': k['id'],
-                'name': k['name'],
-                'count': k['count'],
-            } for k in plugins_families_on_nessus]
+
+            default_filter = '[].{' \
+                             'id: id, ' \
+                             'name: name, ' \
+                             'count: count}'
+
+            if filter:
+                expression = jmespath.compile(filter)
+            else:
+                expression = jmespath.compile(default_filter)
+
+            plugins_families_on_nessus = expression.search(plugins_families_on_nessus)
+
             if format == 'table':
-                print(dataframe_table(plugins_families_on_nessus, sortby='id'))
+                print(dataframe_table(plugins_families_on_nessus))
+            elif format == 'csv':
+                print(dataframe_table(plugins_families_on_nessus).to_csv(index=False), '\n')
             else:
                 print(plugins_families_on_nessus)
 
