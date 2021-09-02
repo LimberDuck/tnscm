@@ -156,7 +156,7 @@ def cli():
               help="Use to see number of licensed IPs, active IPs and left IPs")
 @click.option('--version', is_flag=True,
               help="Get server version")
-def server(address, port, username, password, insecure, format, status, ips, version, verbose):
+def server(address, port, username, password, insecure, format, filter, status, ips, version, verbose):
     """get Nessus server info"""
 
     for one_address in address:
