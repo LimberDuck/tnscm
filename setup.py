@@ -13,6 +13,7 @@ with open("tnscm/_version.py") as f:
 setuptools.setup(
     name="tnscm",
     version=about["__version__"],
+    license='MIT',
     author="Damian Krawczyk",
     author_email="damian.krawczyk@limberduck.org",
     description="TNSCM (Tenable Nessus CLI Manager) by LimberDuck",

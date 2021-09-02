@@ -135,7 +135,7 @@ def dataframe_table(data, sortby=None, groupby=None, tablefmt=None):
         df = df.sort_values(by=sortby)
     if groupby:
         df = df.groupby(groupby)[groupby[0]].count().reset_index(name="count")
-    s = pd.Series(list(range(1, len(df) + 1)))
+    s = pd.Series(data=list(range(1, len(df) + 1)), dtype='object')
     df = df.set_index(s)
     if tablefmt:
         df = str(tabulate(df, headers='keys', tablefmt=tablefmt))
@@ -221,7 +221,7 @@ def user(address, port, username, password, insecure, format, filter, list, verb
 
             for user_on_nessus in users_on_nessus:
                 if 'lastlogin' in user_on_nessus:
-                    user_on_nessus.update({'lastlogin': datetime.datetime.fromtimestamp(0 if user_on_nessus['lastlogin'] is None else user_on_nessus['lastlogin'])})
+                    user_on_nessus.update({'lastlogin': str(datetime.datetime.fromtimestamp(0 if user_on_nessus['lastlogin'] is None else user_on_nessus['lastlogin']))})
 
             default_filter = '[].{' \
                              'id: id, ' \
@@ -254,7 +254,9 @@ def user(address, port, username, password, insecure, format, filter, list, verb
 @add_options(_general_options)
 @click.option('--list', is_flag=True,
               help="Get scan policy list")
-def policy(address, port, username, password, insecure, format, filter, list, verbose):
+@click.option('--delete', is_flag=True,
+              help="Delete scan policy")
+def policy(address, port, username, password, insecure, format, filter, list, delete, verbose):
     """get Nessus policy info"""
 
     for one_address in address:
@@ -274,12 +276,15 @@ def policy(address, port, username, password, insecure, format, filter, list, ve
         if list:
             print(one_address)
             scan_policies_on_nessus = tnscon.policies_get()
+            if scan_policies_on_nessus is None:
+                print("No items!")
+                sys.exit(1)
 
             for scan_policy_on_nessus in scan_policies_on_nessus:
                 if 'creation_date' in scan_policy_on_nessus:
-                    scan_policy_on_nessus.update({'creation_date': datetime.datetime.fromtimestamp(int(scan_policy_on_nessus['creation_date']))})
+                    scan_policy_on_nessus.update({'creation_date': str(datetime.datetime.fromtimestamp(int(scan_policy_on_nessus['creation_date'])))})
                 if 'last_modification_date' in scan_policy_on_nessus:
-                    scan_policy_on_nessus.update({'last_modification_date': datetime.datetime.fromtimestamp(int(scan_policy_on_nessus['last_modification_date']))})
+                    scan_policy_on_nessus.update({'last_modification_date': str(datetime.datetime.fromtimestamp(int(scan_policy_on_nessus['last_modification_date'])))})
 
             default_filter = '[].{' \
                              'id: id, ' \
@@ -304,8 +309,65 @@ def policy(address, port, username, password, insecure, format, filter, list, ve
                     print(scan_policies_on_nessus)
             else:
                 print('{} doesn\'t have any policies!'.format(username))
-        else:
-            print("No option given!")
+
+        if delete:
+            print(one_address)
+            scan_policies_on_nessus = tnscon.policies_get()
+
+            if scan_policies_on_nessus is None:
+                print("No items!")
+                sys.exit(1)
+
+            for scan_policy_on_nessus in scan_policies_on_nessus:
+                if 'creation_date' in scan_policy_on_nessus:
+                    scan_policy_on_nessus.update({'creation_date': str(datetime.datetime.fromtimestamp(int(scan_policy_on_nessus['creation_date'])))})
+                if 'last_modification_date' in scan_policy_on_nessus:
+                    scan_policy_on_nessus.update({'last_modification_date': str(datetime.datetime.fromtimestamp(int(scan_policy_on_nessus['last_modification_date'])))})
+
+            default_filter = '[].{' \
+                             'id: id, ' \
+                             'name: name, ' \
+                             'owner: owner, ' \
+                             'creation_date: creation_date, ' \
+                             'last_modification_date: last_modification_date}'
+
+            if filter:
+                expression = jmespath.compile(filter)
+            else:
+                expression = jmespath.compile(default_filter)
+
+            scan_policies_on_nessus = expression.search(scan_policies_on_nessus)
+
+            if scan_policies_on_nessus is not None:
+                if format == 'table':
+                    print(dataframe_table(scan_policies_on_nessus))
+                elif format == 'csv':
+                    print(dataframe_table(scan_policies_on_nessus).to_csv(index=False), '\n')
+                else:
+                    print(scan_policies_on_nessus)
+
+                if len(scan_policies_on_nessus) == 1:
+                    item_or_items = 'policy'
+                else:
+                    item_or_items = 'policies'
+
+                if 'id' not in scan_policies_on_nessus[0]:
+                    print("\nYou can't delete POLICY without POLICY ID. Use ID in your filter!")
+                    sys.exit(0)
+
+                if click.confirm('\nDo you want to delete {} {} listed above?'.format(len(scan_policies_on_nessus), item_or_items)):
+                    for scan_policy_on_nessus in scan_policies_on_nessus:
+                        scan_policy_id = scan_policy_on_nessus['id']
+                        print("Deleting policy id {}".format(scan_policy_id))
+                        tnscon.policies_delete(scan_policy_id)
+                else:
+                    print("Nothing will be deleted")
+
+
+            else:
+                print('{} doesn\'t have any policies!'.format(username))
+
+
 
         tnscon.logout()
 
@@ -315,8 +377,10 @@ def policy(address, port, username, password, insecure, format, filter, list, ve
 @add_options(_general_options)
 @click.option('--list', is_flag=True,
               help="Get scan list")
-def scan(address, port, username, password, insecure, format, filter, list, verbose):
-    """get Nessus scan info"""
+@click.option('--delete', is_flag=True,
+              help="Delete scan with whole history")
+def scan(address, port, username, password, insecure, format, filter, list, delete, verbose):
+    """get Nessus scan details info"""
 
     for one_address in address:
         one_password = password_check(one_address, username, password, verbose)
@@ -335,12 +399,16 @@ def scan(address, port, username, password, insecure, format, filter, list, verb
         if list:
             print(one_address)
             scans_on_nessus = tnscon.scans_get()
+            print(scans_on_nessus)
+            if scans_on_nessus is None:
+                print("No items!")
+                sys.exit(1)
 
             for scan_on_nessus in scans_on_nessus:
                 if 'creation_date' in scan_on_nessus:
-                    scan_on_nessus.update({'creation_date': datetime.datetime.fromtimestamp(int(scan_on_nessus['creation_date']))})
+                    scan_on_nessus.update({'creation_date': str(datetime.datetime.fromtimestamp(int(scan_on_nessus['creation_date'])))})
                 if 'last_modification_date' in scan_on_nessus:
-                    scan_on_nessus.update({'last_modification_date': datetime.datetime.fromtimestamp(int(scan_on_nessus['last_modification_date']))})
+                    scan_on_nessus.update({'last_modification_date': str(datetime.datetime.fromtimestamp(int(scan_on_nessus['last_modification_date'])))})
 
             default_filter = '[].{' \
                              'folder_id: folder_id, ' \
@@ -348,7 +416,8 @@ def scan(address, port, username, password, insecure, format, filter, list, verb
                              'name: name, ' \
                              'owner: owner, ' \
                              'creation_date: creation_date, ' \
-                             'last_modification_date: last_modification_date}'
+                             'last_modification_date: last_modification_date, ' \
+                             'status: status}'
 
             if filter:
                 expression = jmespath.compile(filter)
@@ -364,17 +433,67 @@ def scan(address, port, username, password, insecure, format, filter, list, verb
             else:
                 print(scans_on_nessus)
 
-        else:
-            print("No option given!")
+        if delete:
+            print(one_address)
+            scans_on_nessus = tnscon.scans_get()
+            print(scans_on_nessus)
+            if scans_on_nessus is None:
+                print("No items!")
+                sys.exit(1)
 
-        tnscon.logout()
+            for scan_on_nessus in scans_on_nessus:
+                if 'creation_date' in scan_on_nessus:
+                    scan_on_nessus.update({'creation_date': str(datetime.datetime.fromtimestamp(int(scan_on_nessus['creation_date'])))})
+                if 'last_modification_date' in scan_on_nessus:
+                    scan_on_nessus.update({'last_modification_date': str(datetime.datetime.fromtimestamp(int(scan_on_nessus['last_modification_date'])))})
+
+            default_filter = '[].{' \
+                             'folder_id: folder_id, ' \
+                             'id: id, ' \
+                             'name: name, ' \
+                             'owner: owner, ' \
+                             'creation_date: creation_date, ' \
+                             'last_modification_date: last_modification_date, ' \
+                             'status: status}'
+
+            if filter:
+                expression = jmespath.compile(filter)
+            else:
+                expression = jmespath.compile(default_filter)
+
+            scans_on_nessus = expression.search(scans_on_nessus)
+
+            if scans_on_nessus is not None:
+                if format == 'table':
+                    print(dataframe_table(scans_on_nessus))
+                elif format == 'csv':
+                    print(dataframe_table(scans_on_nessus).to_csv(index=False), '\n')
+                else:
+                    print(scans_on_nessus)
+
+                if len(scans_on_nessus) == 1:
+                    item_or_items = 'scan'
+                else:
+                    item_or_items = 'scans'
+
+                if 'id' not in scans_on_nessus[0]:
+                    print("\nYou can't delete SCAN without SCAN ID. Use ID in your filter!")
+                    sys.exit(0)
+
+                if click.confirm('\nDo you want to delete {} {} listed above with whole history?'.format(len(scans_on_nessus), item_or_items)):
+                    for scan_on_nessus in scans_on_nessus:
+                        scan_on_nessus_id = scan_on_nessus['id']
+                        print("Deleting scan id {}".format(scan_on_nessus_id))
+                        tnscon.scan_delete(scan_on_nessus_id)
+                else:
+                    print("Nothing will be deleted")
 
 
 @cli.command()
 @add_options(_login_options)
 @add_options(_general_options)
 @click.option('--family-list', is_flag=True,
-              help="Get plugins familieslist")
+              help="Get plugins families list")
 def plugin(address, port, username, password, insecure, format, filter, family_list, verbose):
     """get Nessus plugin info"""
 
@@ -414,6 +533,57 @@ def plugin(address, port, username, password, insecure, format, filter, family_l
                 print(dataframe_table(plugins_families_on_nessus).to_csv(index=False), '\n')
             else:
                 print(plugins_families_on_nessus)
+
+        else:
+            print("No option given!")
+
+        tnscon.logout()
+
+
+@cli.command()
+@add_options(_login_options)
+@add_options(_general_options)
+@click.option('--list', is_flag=True,
+              help="Get settings list")
+def settings(address, port, username, password, insecure, format, filter, list, verbose):
+    """get Nessus settings info"""
+
+    for one_address in address:
+        one_password = password_check(one_address, username, password, verbose)
+
+        try:
+            tnscon = TnsApi(one_address, port, insecure)
+            tnscon.login(username, one_password)
+        except ConnectionError as e:
+            print("Can't reach Nessus API via {}. Please check your connection.".format(one_address))
+            sys.exit(1)
+
+        except CustomOAuth2Error as e:
+            print("Can't login to Nessus API with supplied credentials. Please make sure they are correct.")
+            sys.exit(1)
+
+        if list:
+            print(one_address)
+            advanced_settings_on_nessus = tnscon.settings_advanced_get()
+
+            default_filter = '[].{' \
+                             'id: id, ' \
+                             'name: name, ' \
+                             'value: value}'
+
+            if filter:
+                expression = jmespath.compile(filter)
+            else:
+                expression = jmespath.compile(default_filter)
+
+            advanced_settings_on_nessus = expression.search(advanced_settings_on_nessus)
+
+            if format == 'table':
+                print(dataframe_table(advanced_settings_on_nessus))
+            elif format == 'csv':
+                print(dataframe_table(advanced_settings_on_nessus).to_csv(index=False), '\n')
+            else:
+                print(advanced_settings_on_nessus)
 
         else:
             print("No option given!")
