@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - keyring>=25.5.0
     - oauthlib>=3.2.2
     - requests>=2.32.3
-    - pandas>=2.2.3
+    - pandas>=2.0.3
     - tabulate>=0.9.0
     - jmespath>=1.0.1
 
