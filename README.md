@@ -2,16 +2,15 @@
 
 **TNSCM** *(Tenable Nessus CLI Manager)* by LimberDuck is a CLI tool which enables you to perform certain actions on Nessus by (C) Tenable, Inc. via Nessus API.
 
+[![pepy - Downloads](https://img.shields.io/pepy/dt/tnscm?logo=PyPI)](https://pepy.tech/projects/tnscm) [![PyPI Downloads](https://static.pepy.tech/badge/tnscm/month)](https://pepy.tech/projects/tnscm)
 [![Latest Release version](https://img.shields.io/github/v/release/LimberDuck/tnscm?label=Latest%20release)](https://github.com/LimberDuck/tnscm/releases) 
-[![GitHub Release Date](https://img.shields.io/github/release-date/limberduck/tnscm?label=released&logo=GitHub)](https://github.com/LimberDuck/tnscm/releases) 
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/tnscm?logo=PyPI)](https://pypistats.org/packages/tnscm)
-
-<!-- [![Stars from users](https://img.shields.io/github/stars/LimberDuck/tnscm?label=Stars%20from%20users)](https://github.com/LimberDuck/tnscm)  -->
+[![GitHub Release Date](https://img.shields.io/github/release-date/limberduck/tnscm?label=released&logo=GitHub)](https://github.com/LimberDuck/tnscm/releases)
 [![License](https://img.shields.io/github/license/LimberDuck/tnscm.svg)](https://github.com/LimberDuck/tnscm/blob/main/LICENSE) 
 [![Repo size](https://img.shields.io/github/repo-size/LimberDuck/tnscm.svg)](https://github.com/LimberDuck/tnscm) 
 [![Code size](https://img.shields.io/github/languages/code-size/LimberDuck/tnscm.svg)](https://github.com/LimberDuck/tnscm) 
 [![Supported platform](https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-lightgrey.svg)](https://github.com/LimberDuck/tnscm)
-
+<!-- [![PyPI - Downloads](https://img.shields.io/pypi/dm/tnscm?logo=PyPI)](https://pypistats.org/packages/tnscm) -->
+<!-- [![Stars from users](https://img.shields.io/github/stars/LimberDuck/tnscm?label=Stars%20from%20users)](https://github.com/LimberDuck/tnscm)  -->
 
 ## Main features
 
