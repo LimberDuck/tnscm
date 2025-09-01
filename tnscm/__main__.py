@@ -11,6 +11,8 @@ import sys
 from oauthlib.oauth2.rfc6749.errors import CustomOAuth2Error
 import datetime
 import jmespath
+from tnscm import utilities
+from tnscm import __about__
 
 os_user = getpass.getuser().lower()
 
@@ -44,11 +46,7 @@ _login_options = [
         help="username which you want to use to login",
         show_default="current user",
     ),
-    click.option(
-        "--password", 
-        "-p", 
-        help="password which you want to use to login"
-    ),
+    click.option("--password", "-p", help="password which you want to use to login"),
     click.option(
         "--insecure",
         "-k",
@@ -183,30 +181,45 @@ def dataframe_table(data, sortby=None, groupby=None, tablefmt=None):
     return df
 
 
-@click.group()
-def cli():
-    pass
+PACKAGE_NAME = __about__.__package_name__
+
+
+@click.group(
+    invoke_without_command=True,
+    help="TNSCM - manages Tenable Nessus servers from command line",
+    epilog=f"Additional information:\n\n"
+    f"https://limberduck.org/en/latest/tools/{PACKAGE_NAME}\n"
+    f"https://github.com/LimberDuck/{PACKAGE_NAME}\n"
+    f"https://github.com/LimberDuck/{PACKAGE_NAME}/releases\n",
+)
+@click.version_option(
+    __version__, "--version", "-v", message=f"{PACKAGE_NAME} v.%(version)s"
+)
+@click.option(
+    "--update-check",
+    "-u",
+    is_flag=True,
+    help="Check if a new version is available and exit.",
+)
+@click.pass_context
+def cli(ctx, update_check):
+    if ctx.invoked_subcommand is None and not update_check:
+        click.echo(ctx.get_help())
+        ctx.exit(0)
+    if ctx.invoked_subcommand is None and update_check:
+        utilities.check_for_update()
 
 
 @cli.command()
 @add_options(_login_options)
 @add_options(_general_options)
-@click.option(
-    "--status",
-    is_flag=True,
-    help="Get server status"
-)
+@click.option("--status", is_flag=True, help="Get server status")
 @click.option(
     "--ips",
     is_flag=True,
     help="Use to see number of licensed IPs, active IPs and left IPs",
 )
-@click.option(
-    "--version",
-    is_flag=True,
-    help="Get server version"
-)
-
+@click.option("--version", is_flag=True, help="Get server version")
 def server(
     address,
     port,
@@ -277,12 +290,7 @@ def server(
 @cli.command()
 @add_options(_login_options)
 @add_options(_general_options)
-@click.option(
-    "--list",
-    is_flag=True,
-    help="Get user list"
-)
-
+@click.option("--list", is_flag=True, help="Get user list")
 def user(address, port, username, password, insecure, format, filter, list, verbose):
     """get Nessus user info"""
 
@@ -355,17 +363,8 @@ def user(address, port, username, password, insecure, format, filter, list, verb
 @cli.command()
 @add_options(_login_options)
 @add_options(_general_options)
-@click.option(
-    "--list",
-    is_flag=True,
-    help="Get scan policy list"
-)
-@click.option(
-    "--delete",
-    is_flag=True,
-    help="Delete scan policy"
-)
-
+@click.option("--list", is_flag=True, help="Get scan policy list")
+@click.option("--delete", is_flag=True, help="Delete scan policy")
 def policy(
     address, port, username, password, insecure, format, filter, list, delete, verbose
 ):
@@ -538,16 +537,8 @@ def policy(
 @cli.command()
 @add_options(_login_options)
 @add_options(_general_options)
-@click.option(
-    "--list", is_flag=True,
-    help="Get scan list"
-)
-@click.option(
-    "--delete",
-    is_flag=True,
-    help="Delete scan with whole history"
-)
-
+@click.option("--list", is_flag=True, help="Get scan list")
+@click.option("--delete", is_flag=True, help="Delete scan with whole history")
 def scan(
     address, port, username, password, insecure, format, filter, list, delete, verbose
 ):
@@ -711,12 +702,7 @@ def scan(
 @cli.command()
 @add_options(_login_options)
 @add_options(_general_options)
-@click.option(
-    "--family-list",
-    is_flag=True,
-    help="Get plugins families list"
-)
-
+@click.option("--family-list", is_flag=True, help="Get plugins families list")
 def plugin(
     address, port, username, password, insecure, format, filter, family_list, verbose
 ):
@@ -746,12 +732,7 @@ def plugin(
             print(one_address)
             plugins_families_on_nessus = tnscon.plugins_families_get()
 
-            default_filter = (
-                "[].{"
-                "id: id, "
-                "name: name, "
-                "count: count}"
-            )
+            default_filter = "[].{" "id: id, " "name: name, " "count: count}"
 
             if filter:
                 expression = jmespath.compile(filter)
@@ -779,12 +760,7 @@ def plugin(
 @cli.command()
 @add_options(_login_options)
 @add_options(_general_options)
-@click.option(
-    "--list",
-    is_flag=True,
-    help="Get settings list"
-)
-
+@click.option("--list", is_flag=True, help="Get settings list")
 def settings(
     address, port, username, password, insecure, format, filter, list, verbose
 ):
@@ -814,12 +790,7 @@ def settings(
             print(one_address)
             advanced_settings_on_nessus = tnscon.settings_advanced_get()
 
-            default_filter = (
-                "[].{" 
-                "id: id, " 
-                "name: name, " 
-                "value: value}"
-            )
+            default_filter = "[].{" "id: id, " "name: name, " "value: value}"
 
             if filter:
                 expression = jmespath.compile(filter)
