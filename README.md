@@ -69,7 +69,7 @@ To filter data to specific values you can use [JMESPath](https://jmespath.org).
 
     `tnscm`
 
-### Commands
+## Commands
 
 | option / command | `plugin` | `policy` | `scan` | `server` | `settings` | `user` |
 |------------------|:--------:|:--------:|:------:|:--------:|:----------:|:------:|
@@ -119,7 +119,7 @@ To filter data to specific values you can use [JMESPath](https://jmespath.org).
 | `--hide-address` | yes      | yes      | yes    | yes      | yes        | yes    |
 | `--no-keyring`   | yes      | yes      | yes    | yes      | yes        | yes    |
 
-### Pipelines
+## Pipelines
 
 By default password is read from and saved in OS credential manager (macOS Keychain, Windows Credential Manager)
 using [keyring](https://pypi.org/project/keyring/). Pipeline agents usually don't have one,
@@ -127,7 +127,7 @@ so use `--no-keyring` with `--password`, keyring is then not used at all:
 
 `tnscm scan -a 127.0.0.1 --port 8834 -u user -p "$NESSUS_PASSWORD" --no-keyring --download --limit 1d --hide-banner`
 
-### Server health and licence
+## Server health and licence
 
 Scanner health alerts (e.g. slow DNS lookups, not enough memory) and statistics (CPU, memory, disk space),
 exit code `1` when any alert is critical:
@@ -143,7 +143,7 @@ Use it in a monitoring job:
 
 `tnscm server -a 127.0.0.1 --port 8834 -u user -p "$NESSUS_PASSWORD" --no-keyring --license --warn-days 30 --feed-max-age 2d --hide-banner || echo "check Nessus!"`
 
-### Certificate verification
+## Certificate verification
 
 Nessus uses its own certificate authority (CA), which is not trusted by default, so connection fails with
 `SSL certificate of <address> can't be verified`. You can:
@@ -158,13 +158,13 @@ Nessus uses its own certificate authority (CA), which is not trusted by default,
 
   `tnscm server -a 127.0.0.1 --port 8834 --status -k`
 
-### Clean output
+## Clean output
 
 Use `--hide-banner` to skip tool name and version, and `--hide-address` to skip Nessus address, e.g. to use output in scripts:
 
 `tnscm settings -a 127.0.0.1 --port 8834 --get max_hosts -f "[0].value" --format json --hide-banner --hide-address`
 
-### Example filters
+## Example filters
 
 To check possible keys and values by returning only first entry (works with every command, runs `-f "[0]" --format json`):
 
@@ -198,6 +198,8 @@ To filter returned data to items which `name` is different than string `test nam
 
 `--filter "[?name != 'test name'].{id: id, name: name}"`
 
+## Policy management
+
 ### Policy download
 
 Download (export) all policies, or selected ones, as `.nessus` files.
@@ -230,6 +232,8 @@ Show only differences:
 Show only differences in plugins:
 
 `tnscm policy -a 127.0.0.1 --port 8834 --compare 19 20 --diff --filter "[?section=='plugins']"`
+
+## Plugin management
 
 ### Plugin details
 
@@ -270,6 +274,8 @@ verified 8 plugins in 1m 24s, 10.5s per plugin
 
 Each lookup by file name takes a few seconds on Nessus side, so summary at the bottom shows how many plugins were verified, how long it took and average time per plugin.
 
+## Scan management
+
 ### Scan runs comparison
 
 Compare findings per host of two scan runs given as `SCAN_ID:HISTORY_ID` (from `tnscm scan --list-history`).
@@ -285,30 +291,6 @@ Show only changes:
 Show only new critical and high findings:
 
 `tnscm scan -a 127.0.0.1 --port 8834 --compare 12:13 12:14 --diff --filter "[?result=='new' && contains(['critical', 'high'], \"12:14\")]"`
-
-### Advanced settings
-
-Get value of selected settings (use `--filter "[0].value"` to print value only):
-
-`tnscm settings -a 127.0.0.1 --port 8834 --get max_hosts --get max_checks`
-
-Change existing settings (planned changes are shown and confirmed first):
-
-`tnscm settings -a 127.0.0.1 --port 8834 --edit max_hosts=128 --edit max_checks=4`
-
-Add new custom setting:
-
-`tnscm settings -a 127.0.0.1 --port 8834 --add my_custom_setting=value`
-
-Delete custom setting, or reset built-in setting to its default value:
-
-`tnscm settings -a 127.0.0.1  --port 8834 --delete my_custom_setting`
-
-> **Note:** Nessus hides a built-in setting reset to default from the list, so it can't be changed with `--edit` anymore.
-> Use `--add` to set it again, e.g. `--add max_hosts=256`.
-
-Use `--yes` to apply without confirmation, e.g. in pipelines.
-`--edit` and `--delete` accept only listed names and `--add` only names which are not listed, use `--list` to check current names and values.
 
 ### Scan results download
 
@@ -357,6 +339,31 @@ and a summary `downloaded X, skipped Y, failed Z`. Exit code is `1` if any downl
 `tnscm scan -a 127.0.0.1 --port 8834 --download --limit 1d --no-progress --file-format csv`
 
 > **Note:** Nessus doesn't allow exports in trial mode, such server responds with `403`.
+
+## Advanced settings
+
+Get value of selected settings (use `--filter "[0].value"` to print value only):
+
+`tnscm settings -a 127.0.0.1 --port 8834 --get max_hosts --get max_checks`
+
+Change existing settings (planned changes are shown and confirmed first):
+
+`tnscm settings -a 127.0.0.1 --port 8834 --edit max_hosts=128 --edit max_checks=4`
+
+Add new custom setting:
+
+`tnscm settings -a 127.0.0.1 --port 8834 --add my_custom_setting=value`
+
+Delete custom setting, or reset built-in setting to its default value:
+
+`tnscm settings -a 127.0.0.1  --port 8834 --delete my_custom_setting`
+
+> **Note:** Nessus hides a built-in setting reset to default from the list, so it can't be changed with `--edit` anymore.
+> Use `--add` to set it again, e.g. `--add max_hosts=256`.
+
+Use `--yes` to apply without confirmation, e.g. in pipelines.
+`--edit` and `--delete` accept only listed names and `--add` only names which are not listed, use `--list` to check current names and values.
+
 
 ## Meta
 
