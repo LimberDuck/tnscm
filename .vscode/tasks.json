@@ -17,9 +17,19 @@
         "command": "${config:virtualenvPath}/pip install -r requirements.txt"
       },
       {
-        "label": "Build Application",
+        "label": "Build Package",
         "type": "shell",
         "command": "${config:virtualenvPath}/python setup.py sdist bdist_wheel"
+      },
+      {
+        "label": "Build Application",
+        "type": "shell",
+        "options": {
+          "env": {
+              "MODULE_NAME": "tnscm"
+          }
+        },
+        "command": "${config:virtualenvPath}/pyinstaller --name $MODULE_NAME $MODULE_NAME/__main__.py"
       },
       {
         "label": "Start sphinx-autobuild",
